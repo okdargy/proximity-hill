@@ -10,9 +10,15 @@ A node-hill script that integrates WebRTC voice chat with proximity volume.
 npm install
 ```
 
-### Create your super secret .env file with your super secret JWT token
+### Create your super secret .env file
 
-First, create a secure 64 character token using Node.js's built in crypto library.
+First, insert your server port to host proximity-hill:
+
+```
+PORT=3000
+```
+
+Now, create a secure 64 character token using Node.js's built in crypto library.
 
 ```
 require('crypto').randomBytes(64).toString('hex')
@@ -22,4 +28,5 @@ Then insert that token into your .env file just like this:
 
 ```
 JWT_SECRET=super_secret_token
+PORT=3000
 ```
