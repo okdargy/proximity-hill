@@ -1,10 +1,10 @@
 {
-  "name": "node-hill-template",
+  "name": "proximity-hill",
   "version": "1.0.0",
-  "description": "A sample template for hosting node-hill servers.",
+  "description": "A node-hill script that integrates WebRTC voice chat with proximity volume.",
   "main": "start.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node start.js"
   },
   "author": "You",
   "license": "ISC",

@@ -1,6 +1,5 @@
 const nh = require("node-hill");
 const dotenv = require("dotenv").config();
-console.log(process.env.port);
 
 nh.startServer({
   hostKey: "", // Your host key here (can be found under the settings of the set.)

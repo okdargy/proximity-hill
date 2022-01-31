@@ -30,3 +30,11 @@ Then insert that token into your .env file just like this:
 JWT_SECRET=super_secret_token
 PORT=3000
 ```
+
+## Run your server
+
+To start your server, type in this command:
+
+```
+npm start
+```
