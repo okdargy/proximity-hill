@@ -1,0 +1,21 @@
+{
+  "name": "node-hill-template",
+  "version": "1.0.0",
+  "description": "A sample template for hosting node-hill servers.",
+  "main": "start.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "You",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.19.1",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^15.0.0",
+    "express": "^4.17.2",
+    "jsonwebtoken": "^8.5.1",
+    "node-fetch": "^2.6.7",
+    "node-hill": "^12.2.8",
+    "quick.db": "^7.1.3"
+  }
+}

@@ -1,0 +1,19 @@
+{
+    "bundle": {
+        "compression": false,
+        "binary": false,
+        "map": "./maps/my_map.brk",
+        "scripts": {
+            "directory": "./user_scripts",
+            "files": [
+                "**/*.js"
+            ]
+        }
+    },
+    "debundle": {
+        "map": "./bundled/maps/",
+        "scripts": {
+            "directory": "./bundled/user_scripts/"
+        }
+    }
+}
