@@ -25,6 +25,10 @@ nh.startServer({
     { config: process.env }, // replacing dotenv
     "body-parser",
     "cookie-parser",
+    "socket.io",
+    "peer",
+    "uuid",
+    "http",
   ],
 });
 

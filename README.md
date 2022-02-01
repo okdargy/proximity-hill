@@ -1,6 +1,6 @@
 ## proximity-hill
 
-A node-hill script that integrates WebRTC voice chat with proximity volume.
+A [node-hill](https://www.npmjs.com/package/node-hill) script that integrates WebRTC voice chat with proximity volume.
 
 ## Setup
 
