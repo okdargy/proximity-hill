@@ -16,10 +16,9 @@ const server = http.createServer(app);
 const io = getModule("socket.io")(server);
 const socketioJwt = getModule("socketio-jwt");
 
-io.set(
-  "authorization",
+io.use(
   socketioJwt.authorize({
-    secret: `${env.JWT_SECRET}`,
+    secret: "your secret or public key",
     handshake: true,
   })
 );
