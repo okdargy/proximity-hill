@@ -6,8 +6,6 @@ var bodyParser = getModule("body-parser");
 var cookieParser = getModule("cookie-parser");
 
 const { ExpressPeerServer } = getModule("peer");
-const { v4: uuidv4 } = getModule("uuid");
-
 // Authorization
 var jwt = getModule("jsonwebtoken");
 var db = getModule("quick.db");
@@ -16,6 +14,15 @@ var env = getModule("config");
 var app = express();
 const server = http.createServer(app);
 const io = getModule("socket.io")(server);
+const socketioJwt = getModule("socketio-jwt");
+
+io.set(
+  "authorization",
+  socketioJwt.authorize({
+    secret: `${env.JWT_SECRET}`,
+    handshake: true,
+  })
+);
 
 const peerjsWrapper = {
   on(event, callback) {
@@ -76,7 +83,7 @@ const users = [];
 
 // handle socket connection
 io.on("connection", (socket) => {
-  const id = uuidv4();
+  const id = socket.handshake.decoded_token.user;
   users.push({ id, socket });
   console.log("user connected", id);
 

@@ -24,10 +24,10 @@ nh.startServer({
     "node-fetch",
     { config: process.env }, // replacing dotenv
     "body-parser",
+    "socketio-jwt",
     "cookie-parser",
     "socket.io",
     "peer",
-    "uuid",
     "http",
   ],
 });
