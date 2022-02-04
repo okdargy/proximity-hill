@@ -108,6 +108,34 @@ peerServer.on("disconnect", (peer) => {
   console.log("peer disconnected", peer.id);
 });
 
+function createSocketListener(userid, type) {
+  // createSocketListener('1', 'moved')
+
+  let player = Game.players.find(
+    (player) => player.playerId === parseInt(userid)
+  );
+
+  if (player) {
+    player.newEvent = (name, callback) => {
+      player.on(name, callback);
+      return {
+        disconnect: () => player.off(name, callback),
+      };
+    };
+
+    let movedEvent = player.newEvent("moved", (newPosition, newRotation) => {
+      let checkAlive = setInterval(function () {
+        if (player.destroyed == true) {
+          console.log("Disconnected move alive funtion for " + player.username);
+          // disconnect their socket.io connection (none for you invis)
+          clearInterval(checkAlive);
+          movedEvent.disconnect();
+        }
+      }, 1000);
+    });
+  } else return "no user eixst bruh";
+}
+
 // delete later, dev only
 app.get("/whoami", authenticateJWT, (req, res) => {
   var token = req.cookies.token;
@@ -179,7 +207,9 @@ app.post("/auth", (req, res) => {
   if (req.body.code == db.get(req.body.userid)) {
     var token = createToken(req.body.userid);
     res.json({ token: token });
-    // db.delete(req.body.userid);
+    db.delete(req.body.userid);
+
+    // createSocketListener(req.body.userid, "moved");
   } else {
     res.status(401).json({
       error: "Incorrect verification code.",
