@@ -84,18 +84,22 @@ const createToken = (user) => {
 // track which users are connected
 const users = [];
 
-function getCookie(cookie, name) {
-  const value = `; ${cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop().split(";").shift();
-}
+io.use((socket, next) => {
+  var token = jwt.decode(socket.handshake.auth.token);
+  if (token == null || !token.user) {
+    const err = new Error("not authorized");
+    err.data = { content: "Please retry later" }; // additional details
+    next(err);
+  } else {
+    socket.token = token;
+    console.log("done");
+    next();
+  }
+});
 
 // handle socket connection
 io.on("connection", (socket) => {
-  var token = getCookie(socket.handshake.headers.cookie, "token");
-  var decoded = jwt.decode(token);
-  if (decoded == null) return socket.disconnect();
-  var id = decoded.user;
+  var id = socket.token.user;
   users.push({ id, socket });
   console.log("user connected", id);
 

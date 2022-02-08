@@ -20,7 +20,17 @@ function playAudioStream(stream, target) {
   $(".audiostream-container").appendChild(elem);
 }
 
-const socket = io();
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(";").shift();
+}
+
+const socket = io({
+  auth: {
+    token: getCookie("token"),
+  },
+});
 let id, peer;
 
 // create peer, setup handlers
@@ -39,6 +49,9 @@ function initPeer() {
   });
   peer.on("error", (err) => {
     console.error(err);
+  });
+  peer.on("connect_error", (err) => {
+    log(err.message); // not authorized
   });
 
   // run when someone calls us. answer the call
