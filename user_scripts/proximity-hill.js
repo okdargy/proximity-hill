@@ -14,14 +14,6 @@ var env = getModule("config");
 var app = express();
 const server = http.createServer(app);
 const io = getModule("socket.io")(server);
-const socketioJwt = getModule("socketio-jwt");
-
-io.use(
-  socketioJwt.authorize({
-    secret: "your secret or public key",
-    handshake: true,
-  })
-);
 
 const peerjsWrapper = {
   on(event, callback) {
@@ -50,6 +42,18 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 
 // Functions & consts
+const decodeToken = (token) => {
+  jwt.verify(token, `${env.JWT_SECRET}`, function (err, decoded) {
+    if (err) {
+      return err;
+    } else if (decoded) {
+      return decoded;
+    } else {
+      return "Unexpected error.";
+    }
+  });
+};
+
 const authenticateJWT = (req, res, next) => {
   const authHeader = req.cookies;
   console.log(authHeader);
@@ -80,9 +84,18 @@ const createToken = (user) => {
 // track which users are connected
 const users = [];
 
+function getCookie(cookie, name) {
+  const value = `; ${cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(";").shift();
+}
+
 // handle socket connection
 io.on("connection", (socket) => {
-  const id = socket.handshake.decoded_token.user;
+  var token = getCookie(socket.handshake.headers.cookie, "token");
+  var decoded = jwt.decode(token);
+  if (decoded == null) return socket.disconnect();
+  var id = decoded.user;
   users.push({ id, socket });
   console.log("user connected", id);
 
