@@ -41,19 +41,6 @@ app.use(express.static(__dirname + "/public/js"));
 app.use(bodyParser.json());
 app.use(cookieParser());
 
-// Functions & consts
-const decodeToken = (token) => {
-  jwt.verify(token, `${env.JWT_SECRET}`, function (err, decoded) {
-    if (err) {
-      return err;
-    } else if (decoded) {
-      return decoded;
-    } else {
-      return "Unexpected error.";
-    }
-  });
-};
-
 const authenticateJWT = (req, res, next) => {
   const authHeader = req.cookies;
   console.log(authHeader);
@@ -81,25 +68,68 @@ const createToken = (user) => {
 };
 
 // voice chat servers
+// dont max out
+const throttle = (func, limit) => {
+  let lastFunc;
+  let lastRan;
+  return function () {
+    const context = this;
+    const args = arguments;
+    if (!lastRan) {
+      func.apply(context, args);
+      lastRan = Date.now();
+    } else {
+      clearTimeout(lastFunc);
+      lastFunc = setTimeout(function () {
+        if (Date.now() - lastRan >= limit) {
+          func.apply(context, args);
+          lastRan = Date.now();
+        }
+      }, limit - (Date.now() - lastRan));
+    }
+  };
+};
+
 // track which users are connected
 const users = [];
 
 io.use((socket, next) => {
-  var token = jwt.decode(socket.handshake.auth.token);
-  if (token == null || !token.user) {
-    const err = new Error("not authorized");
-    err.data = { content: "Please retry later" }; // additional details
-    next(err);
+  if (socket.handshake.auth && socket.handshake.auth.token) {
+    jwt.verify(
+      socket.handshake.auth.token,
+      `${env.JWT_SECRET}`,
+      function (err, decoded) {
+        if (err) {
+          const err = new Error("Not authorized");
+          err.data = {
+            content:
+              "Authorization error. Please reverify your account. If this continues, please contact support.",
+          };
+          console.log(err);
+          return next(err);
+        }
+        socket.decoded = decoded;
+        next();
+      }
+    );
   } else {
-    socket.token = token;
-    console.log("done");
-    next();
+    const err = new Error("Not authorized");
+    err.data = {
+      content:
+        "No credientials provided. Please reverify your account. If this continues, please contact support.",
+    }; // additional details
+    next(err);
   }
 });
 
 // handle socket connection
 io.on("connection", (socket) => {
-  var id = socket.token.user;
+  var id = socket.decoded.user;
+  console.log(socket.decoded);
+  let player = Game.players.find((player) => player.userId === parseInt(id));
+  if (!player) {
+    return socket.emit("error", "You are currently not connected to the game.");
+  }
   users.push({ id, socket });
   console.log("user connected", id);
 
@@ -109,11 +139,44 @@ io.on("connection", (socket) => {
   // tell the other users to connect to this user
   socket.broadcast.emit("join", id);
 
+  Game.newEvent = (name, callback) => {
+    Game.on(name, callback);
+    return {
+      disconnect: () => Game.off(name, callback),
+    };
+  };
+
+  player.newEvent = (name, callback) => {
+    player.on(name, callback);
+    return {
+      disconnect: () => player.off(name, callback),
+    };
+  };
+
+  const emitPos = throttle((x, y, z) => {
+    socket.broadcast.emit("pos", id, { x, y, z });
+  }, 25);
+
+  let movedEvent = player.newEvent("moved", (newPosition, newRotation) => {
+    emitPos(newPosition.x, newPosition.y, newPosition.z);
+  });
+
+  let disconnectEvent = Game.newEvent("playerLeave", (player) => {
+    if (player.userId == parseInt(id)) {
+      disconnectEvent.disconnect();
+      movedEvent.disconnect();
+    }
+  });
+
   // user disconnected
   socket.on("disconnect", () => {
     console.log("user disconnected", id);
     // let other users know to disconnect this client
     socket.broadcast.emit("leave", id);
+
+    // rmeove user from events
+    disconnectEvent.disconnect();
+    movedEvent.disconnect();
 
     // remove the user from the users list
     const index = users.findIndex((u) => u.id === id);
@@ -139,24 +202,7 @@ function createSocketListener(userid, type) {
   );
 
   if (player) {
-    player.newEvent = (name, callback) => {
-      player.on(name, callback);
-      return {
-        disconnect: () => player.off(name, callback),
-      };
-    };
-
-    let movedEvent = player.newEvent("moved", (newPosition, newRotation) => {
-      let checkAlive = setInterval(function () {
-        if (player.destroyed == true) {
-          console.log("Disconnected move alive funtion for " + player.username);
-          // disconnect their socket.io connection (none for you invis)
-          clearInterval(checkAlive);
-          movedEvent.disconnect();
-        }
-      }, 1000);
-    });
-  } else return "no user eixst bruh";
+  }
 }
 
 // delete later, dev only
@@ -231,8 +277,6 @@ app.post("/auth", (req, res) => {
     var token = createToken(req.body.userid);
     res.json({ token: token });
     db.delete(req.body.userid);
-
-    // createSocketListener(req.body.userid, "moved");
   } else {
     res.status(401).json({
       error: "Incorrect verification code.",

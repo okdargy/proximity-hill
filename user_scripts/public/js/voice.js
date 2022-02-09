@@ -50,9 +50,6 @@ function initPeer() {
   peer.on("error", (err) => {
     console.error(err);
   });
-  peer.on("connect_error", (err) => {
-    log(err.message); // not authorized
-  });
 
   // run when someone calls us. answer the call
   peer.on("call", async (call) => {
@@ -102,4 +99,12 @@ socket.on("leave", (target) => {
   const elem = $(`[data-peer="${target}"]`);
   log("call dropped from", target);
   if (elem) elem.remove();
+});
+
+socket.on("connect_error", (err) => {
+  log(err.data.content);
+});
+
+socket.on("error", (err) => {
+  log(err);
 });
