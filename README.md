@@ -42,3 +42,4 @@ npm start
 ## Thanks to:
 
 [Meshiest/demo-voice](https://github.com/Meshiest/demo-voice)
+[Meshiest/demo-proximity-voice](https://github.com/Meshiest/demo-proximity-voice)
