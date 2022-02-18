@@ -1,6 +1,6 @@
 ## proximity-hill
 
-A [node-hill](https://www.npmjs.com/package/node-hill) script that integrates PeerJS voice chat with proximity volume.
+A [node-hill](https://www.npmjs.com/package/node-hill) script that integrates PeerJS voice chat (that will have proximity volume).
 
 ## Setup
 
