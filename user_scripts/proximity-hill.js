@@ -126,18 +126,23 @@ io.use((socket, next) => {
 io.on("connection", (socket) => {
   var id = socket.decoded.user;
   console.log(socket.decoded);
+  const pos = { x: 0, y: 0 };
   let player = Game.players.find((player) => player.userId === parseInt(id));
   if (!player) {
     return socket.emit("error", "You are currently not connected to the game.");
   }
-  users.push({ id, socket });
+  users.push({ id, socket, pos });
   console.log("user connected", id);
 
   // tell user his or her id
   socket.emit("id", id);
 
   // tell the other users to connect to this user
-  socket.broadcast.emit("join", id);
+  socket.broadcast.emit("join", id, pos);
+  socket.emit(
+    "players",
+    users.filter((u) => u.id !== id).map((u) => ({ id: u.id, pos: u.pos }))
+  );
 
   Game.newEvent = (name, callback) => {
     Game.on(name, callback);
@@ -194,17 +199,6 @@ peerServer.on("disconnect", (peer) => {
   console.log("peer disconnected", peer.id);
 });
 
-function createSocketListener(userid, type) {
-  // createSocketListener('1', 'moved')
-
-  let player = Game.players.find(
-    (player) => player.playerId === parseInt(userid)
-  );
-
-  if (player) {
-  }
-}
-
 // delete later, dev only
 app.get("/whoami", authenticateJWT, (req, res) => {
   var token = req.cookies.token;
@@ -259,10 +253,15 @@ Game.command("verify", (caller, message) => {
     if (db.get(`${caller.userId}`)) {
       db.delete(`${caller.userId}`);
       caller.message(
-        "[#34b1eb][VC] [#ffffff]Your verification code has expired due to inactivity."
+        "[#34b  1eb][VC] [#ffffff]Your verification code has expired due to inactivity."
       );
     }
   }, 30 * 1000);
+});
+
+Game.command("users", (caller, message) => {
+  caller.message(`[#34b1eb][VC] [#ffffff]Check the [#34b1eb]console[#ffffff].`);
+  console.log(users);
 });
 
 app.post("/auth", (req, res) => {
