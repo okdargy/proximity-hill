@@ -198,6 +198,15 @@ io.on("connection", (socket) => {
     if (player.userId == parseInt(id)) {
       disconnectEvent.disconnect();
       movedEvent.disconnect();
+
+      const index = users.find((u) => u.id === '' + player.userId);
+
+      if (index) {
+        index.socket.disconnect();
+        index.peer.socket.close();
+        users.splice(index, 1);
+        console.log('deleted')
+      }
     }
   });
 
@@ -308,6 +317,7 @@ Game.command("ban", (caller, args) => {
             content: "You have been banned from the server. Please contact support.",
           });
           user.socket.disconnect();
+          user.peer.disconnect();
         }
 
         caller.message("Successfully banned " + player.username)
@@ -337,6 +347,7 @@ Game.command("kick", (caller, args) => {
             content: "You have been kicked from the server.",
           });
           user.socket.disconnect();
+          user.peer.disconnect();
         }
 
         caller.message("Successfully kicked " + player.username)
