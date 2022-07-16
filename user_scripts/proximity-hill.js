@@ -328,10 +328,8 @@ Game.command("ban", (caller, args) => {
 
 Game.command("unban", (caller, args) => {
   if (!serverMods.includes(caller.userId)) return
-
-  if(db.get(`banned_${args[0]}`) == true) db.set(`banned_${args[0]}`, false)
-  caller.message("Successfully modified ban status of " + args[0])
-
+  if(db.get(`banned_${args}`) == true) db.set(`banned_${args}`, false)
+  caller.message("Successfully modified ban status of " + args)
 })
 
 Game.command("kick", (caller, args) => {  
