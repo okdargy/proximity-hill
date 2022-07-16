@@ -1,10 +1,66 @@
-<div class="audiostream-container">
-</div>
+<!DOCTYPE html>
+<html lang="en">
 
-<pre id="logs"></pre>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+    <title>Voice | Voice-Hill</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+        crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
 
     <link rel="stylesheet" href="/voice.css" />
-    <script src="/beta-voice.js" defer></script>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+</head>
+
+<body>
+    <div id="mainContainer">
+        <div class="text-center mx-auto my-3">
+
+          <button class="btn btn-danger" id="muteMicBtn">Mute</button>
+            <button class="btn btn-warning" id="deafenBtn">Deafen</button>
+        </div>
+        <div class="mx-auto my-3 w-25">
+            <input type="text" class="form-control" placeholder="Filter usernames" id="filterInpt">
+        </div>
+        
+        <div id="playersContainer">
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="errorToast" class="toast bg-danger text-white" role="alert" aria-live="assertive" aria-atomic="true">
+          <div class="toast-body" id="errorText">
+            This is a error message.. waiting on an error.
+          </div>
+        </div>
+      </div>
+
+      <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="infoToast" class="toast bg-secondary text-white" role="alert" aria-live="assertive" aria-atomic="true">
+          <div class="toast-body" id="infoText">
+            This is a info message.. waiting on information.
+          </div>
+        </div>
+      </div>
+
+    <template id="playerTemplate">
+        <div id="playerContainer" class="text-center mx-auto my-1" >
+            <label class="mx-1" id="playerLabel"></label>
+            <button class="btn btn-danger mx-1" id="muteBtn">Mute</button>
+            <button class="btn btn-info" id="profileBtn">
+                <a id="profileLink" target="_blank">Profile</a>
+            </button>
+        </div>
+    </template>
+    
+    <script src="/voice.js" defer></script>
+</body>
+
+</html>

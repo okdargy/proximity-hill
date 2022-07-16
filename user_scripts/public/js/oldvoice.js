@@ -1,7 +1,6 @@
 const $ = document.querySelector.bind(document);
-const log = (...args) => (logs.innerText += args.join(" ") + "\n");
-const SOUND_CUTOFF_RANGE = 100;
-const SOUND_NEAR_RANGE = 10;
+const SOUND_CUTOFF_RANGE = 50;
+const SOUND_NEAR_RANGE = 5;
 
 function getCookie(name) {
   const value = `; ${document.cookie}`;
@@ -16,11 +15,9 @@ const socket = io({
 });
 
 // KEEP JUST IN CASE
-const myPos = { x: 0, y: 0 };
-const lastPos = { x: 0, y: 0 };
-const cursor = { down: false, x: 0, y: 0 };
-
-const players = [];
+var myPos = { x: 0, y: 0 };
+var players = [];
+var mutedAll = false;
 
 function calcVolumes(listenerPos, soundPos) {
   // calulate angle and distance from listener to sound
@@ -49,16 +46,6 @@ function calcVolumes(listenerPos, soundPos) {
     (Math.pow(cos > 0 ? cos : 0, 2) + Math.pow(sin, 2)) * scale,
   ];
 }
-
-window.addEventListener("load", function(){
-    for (const p of players) {
-      if (p.stream) {
-        // console.log(calcVolumes(myPos, p.pos));
-        const [left, right] = calcVolumes(myPos, p.pos);
-        p.stream.setVolume(left, right);
-      }
-    }
-});
 
 // get the current user's audio stream
 function getAudioStream() {
@@ -131,9 +118,8 @@ function playAudioStream(stream, target) {
   elem.onloadedmetadata = () => elem.play();
 
   // add it to the stream container
-  $(".audiostream-container").appendChild(elem);
+  document.body.appendChild(elem);
 }
-
 
 let id, peer;
 
@@ -146,10 +132,16 @@ function initPeer() {
   });
 
   peer.on("open", (id) => {
-    log("My peer ID is:", id);
+    console.log("My peer ID is:", id);
+    selfId = id;
   });
   peer.on("disconnected", (id) => {
-    log("lost connection");
+    console.log("lost connection");
+
+    // find div element with them and remove it
+    const elem = document.querySelector("div[profileId='" + id + "']")
+
+    if(elem) elem.remove();
   });
   peer.on("error", (err) => {
     console.error(err);
@@ -157,11 +149,76 @@ function initPeer() {
 
   // run when someone calls us. answer the call
   peer.on("call", async (call) => {
-    log("call from", call.peer);
+    console.log("call from", call.peer);
+
     call.answer(await getAudioStream());
     receiveCall(call);
   });
 }
+
+
+function mute(id) {
+  console.log(id);
+  const player = players.find((p) => p.id === id.toString());
+  if (!player) return console.error("no player, no mute");
+
+  var muteToggleBtn = document.querySelector(
+    "div[profileId='" + id + "'] > button[id='muteBtn']"
+  )
+
+  if (player.stream) {
+    if (muteToggleBtn.innerHTML == "Unmute") {
+      player.stream.stream.getAudioTracks()[0].enabled = true;
+      console.log("unmuted");
+      player.muted = false;
+      document.querySelector(
+        "div[profileId='" + id + "'] > button[id='muteBtn']"
+      ).innerHTML = "Mute";
+    } else {
+      player.stream.stream.getAudioTracks()[0].enabled = false;
+      console.log("muted");
+      player.muted = true;
+    }
+  }
+}
+
+function toggleMuteAll() {
+  if(mutedAll == false) {
+    mutedAll = true;
+    document.querySelector("#muteAllBtn").innerHTML = "Unmute All";
+    players.forEach((p) => {
+      if(p.stream) {
+        p.stream.stream.getAudioTracks()[0].enabled = false;
+
+        document.querySelector(
+          "div[profileId='" + p.id + "'] > button[id='muteBtn']"
+        ).innerHTML = "Unmute";
+      }
+    })
+  } else {
+    mutedAll = false;
+    document.querySelector("#muteAllBtn").innerHTML = "Mute All";
+    players.forEach((p) => {
+      if(p.stream) {
+        p.stream.stream.getAudioTracks()[0].enabled = true;
+
+        document.querySelector(
+          "div[profileId='" + p.id + "'] > button[id='muteBtn']"
+        ).innerHTML = "Mute";
+      }
+    })  
+  }
+}
+
+socket.on("error", (err) => {
+  console.error(err);
+
+  const errorToast = document.getElementById("errorToast");
+  const errorText = document.getElementById("errorText");
+  errorText.innerText = err;
+  const toast = new bootstrap.Toast(errorToast);
+  toast.show();
+});
 
 // start a call with target
 async function startCall(target) {
@@ -180,17 +237,27 @@ function receiveCall(call) {
     } else {
       player.stream = new StreamSplit(stream, { left: 1, right: 1 });
       playAudioStream(stream, call.peer);
-      log("created stream for", call.peer);
+      console.log("created stream for", call.peer);
     }
     // playAudioStream(stream, call.peer);
   });
 }
 
+setInterval(function () {
+  for (const p of players) {
+    if (p.stream) {
+      console.log(p.id, "is", calcVolumes(myPos, p.pos));
+      const [left, right] = calcVolumes(myPos, p.pos);
+      p.stream.setVolume(left, right);
+    }
+  }
+}, 100);
+
 // setup peer when user receives id
 socket.on("id", async (connId) => {
   // this only happens if we lose connection with the server
   if (id) {
-    log("destroying old identity", id, "and replacing with", connId);
+    console.log("destroying old identity", id, "and replacing with", connId);
     peer.destroy();
     peer = undefined;
     return;
@@ -201,25 +268,66 @@ socket.on("id", async (connId) => {
 });
 
 // talk to any user who joins
-socket.on("join", (target, pos) => {
-  log("calling", target);
-  players.push({ id: target, avatar: 0, pos, goal: { x: pos.x, y: pos.y } });
+socket.on("join", (target, pos, username) => {
+  console.log("calling", target);
+  players.push({
+    id: target,
+    avatar: 0,
+    pos,
+    goal: { x: pos.x, y: pos.y },
+    username,
+  });
+
+  var profileDiv = document.createElement("div");
+  profileDiv.className = "text-center mx-auto my-1";
+  profileDiv.setAttribute("profileId", target);
+  profileDiv.innerHTML = `<label class="mx-1">${username}</label><button class="btn btn-danger mx-1" id="muteBtn" onclick="mute(${target});">Mute</button><button class="btn btn-info"><a href="https://www.brick-hill.com/user/${target}" target="_blank">Profile</a></button>`;
+
   startCall(target);
 });
 
 socket.on("players", (existingPlayers) => {
   for (const p of existingPlayers) {
     players.push({
+      username: p.username,
       id: p.id,
       avatar: 0,
       pos: p.pos,
       goal: { x: p.pos.x, y: p.pos.y },
     });
+
+    var profileDiv = document.createElement("div");
+    profileDiv.className = "text-center mx-auto my-1";
+    profileDiv.setAttribute("profileId", p.id);
+    profileDiv.innerHTML = `<label class="mx-1">${p.username}</label><button class="btn btn-danger mx-1" id="muteBtn" onclick="mute(${p.id});">Mute</button><button class="btn btn-info"><a href="https://www.brick-hill.com/user/${p.id}" target="_blank">Profile</a></button>`;
+
+    document.getElementById("playersContainer").appendChild(profileDiv);
   }
+});
+
+socket.on("myPos", (pos) => {
+  myPos = pos;
+});
+
+socket.on("mute", (userid) => {
+  const player = players.find((p) => p.id === userid);
+  if (!player) return console.error("no player, no mute");
+
+  var muteToggleBtn = document.querySelector(
+    "div[profileId='" + userid + "'] > button[id='muteBtn']"
+  )
+
+  if (player.stream) {
+      muteToggleBtn.innerHTML = "Unmute";
+      player.stream.stream.getAudioTracks()[0].enabled = false;
+      console.log("muted");
+      player.muted = true;
+    }
 });
 
 socket.on("pos", (id, pos) => {
   const player = players.find((p) => p.id === id);
+
   if (player) {
     player.goal.x = pos.x;
     player.goal.y = pos.y;
@@ -227,7 +335,7 @@ socket.on("pos", (id, pos) => {
 });
 
 socket.on("leave", (target) => {
-  log("call dropped from", target);
+  console.log("call dropped from", target);
   const elem = $(`[data-peer="${target}"]`);
   if (elem) elem.remove();
 
@@ -239,3 +347,19 @@ socket.on("leave", (target) => {
     players.splice(index, 1);
   }
 });
+
+
+function filterPlayers() {
+  const filterInpt = document.getElementById("filterInpt");
+  const playersContainer = document.getElementById("playersContainer");
+  const players = playersContainer.getElementsByTagName("div");
+  for (const p of players) {
+    if (p.innerText.toLowerCase().includes(filterInpt.value.toLowerCase())) {
+      p.style.display = "block";
+    } else {
+      p.style.display = "none";
+    }
+  }
+}
+
+document.getElementById("filterInpt").addEventListener("input", filterPlayers);

@@ -37,7 +37,7 @@ document.getElementById("next").addEventListener("click", async function () {
 
       if (data.token) {
         document.cookie = `token=${data.token}`;
-        document.location.href = "/whoami";
+        document.location.href = "/voice";
       }
     })
     .catch((error) => console.log("error", error));

@@ -41,6 +41,8 @@ app.use(express.static(__dirname + "/public/js"));
 app.use(bodyParser.json());
 app.use(cookieParser());
 
+var serverMods = [102255, 936457, 1];
+
 const authenticateJWT = (req, res, next) => {
   const authHeader = req.cookies;
   console.log(authHeader);
@@ -105,9 +107,24 @@ io.use((socket, next) => {
             content:
               "Authorization error. Please reverify your account. If this continues, please contact support.",
           };
-          console.log(err);
+
+          socket.emit("error", err.data.content);
           return next(err);
         }
+
+        var banStatus = db.get('banned_' + decoded.user)
+
+        if(banStatus == true) {
+          const err = new Error("Banned");
+          err.data = {
+            content:
+              "You have been banned from the server. Please contact support.",
+          };
+
+          socket.emit("error", err.data.content);
+          return next(err); 
+        }
+
         socket.decoded = decoded;
         next();
       }
@@ -117,7 +134,8 @@ io.use((socket, next) => {
     err.data = {
       content:
         "No credientials provided. Please reverify your account. If this continues, please contact support.",
-    }; // additional details
+    };
+    socket.emit("error", err.data.content);
     next(err);
   }
 });
@@ -125,23 +143,32 @@ io.use((socket, next) => {
 // handle socket connection
 io.on("connection", (socket) => {
   var id = socket.decoded.user;
-  console.log(socket.decoded);
-  const pos = { x: 0, y: 0 };
+  console.log('Successfully connected to socket (' + id + ')');
+  var pos = { x: 0, y: 0 };
   let player = Game.players.find((player) => player.userId === parseInt(id));
+  
   if (!player) {
     return socket.emit("error", "You are currently not connected to the game.");
+    socket.disconnect(true);
   }
-  users.push({ id, socket, pos });
-  console.log("user connected", id);
+
+  if (users.find((user) => user.id === id)) {
+    return socket.emit("error", "You are already connected to the voice channel.");
+    socket.disconnect(true);
+  }
+
+  var pos = player.position
+  users.push({ id, socket, pos, username: player.username });
 
   // tell user his or her id
   socket.emit("id", id);
+  socket.emit("pos", -1, player.position);
 
   // tell the other users to connect to this user
-  socket.broadcast.emit("join", id, pos);
+  socket.broadcast.emit("join", id, pos, player.username);
   socket.emit(
     "players",
-    users.filter((u) => u.id !== id).map((u) => ({ id: u.id, pos: u.pos }))
+    users.filter((u) => u.id !== id).map((u) => ({ id: u.id, pos: u.pos, username: u.username }))
   );
 
   Game.newEvent = (name, callback) => {
@@ -160,6 +187,7 @@ io.on("connection", (socket) => {
 
   const emitPos = throttle((x, y, z) => {
     socket.broadcast.emit("pos", id, { x, y, z });
+    socket.emit('pos', -1, { x, y, z })
   }, 25);
 
   let movedEvent = player.newEvent("moved", (newPosition, newRotation) => {
@@ -175,7 +203,7 @@ io.on("connection", (socket) => {
 
   // user disconnected
   socket.on("disconnect", () => {
-    console.log("user disconnected", id);
+    console.log("User has disconnected (id: " + id + ")");
     // let other users know to disconnect this client
     socket.broadcast.emit("leave", id);
 
@@ -191,8 +219,31 @@ io.on("connection", (socket) => {
   });
 });
 
+Game.command("globalmute", (caller, args) => {
+  if (!serverMods.includes(caller.userId)) return
+
+  const username = args[0]
+  for (let player of Game.players) {
+    if (player.username.startsWith(args)) {
+      users.forEach(function(){
+        if(this.id == player.userId) {
+          this.socket.emit("error", "You have been muted by a server moderator.")
+        }
+
+        caller.message("Successfully muted " + player.username)
+        socket.emit('mute', player.userId)
+      })
+    }
+  }
+})
+
 peerServer.on("connection", (peer) => {
   console.log("peer connected", peer.id);
+  var user = users.find((u) => u.id === peer.id);
+  if (user) {
+    user.peer = peer;
+  }
+  
 });
 
 peerServer.on("disconnect", (peer) => {
@@ -241,6 +292,78 @@ app.post("/exist", async function (req, res) {
     });
 });
 
+Game.command("ban", (caller, args) => {
+  if (!serverMods.includes(caller.userId)) return
+
+  for (let player of Game.players) {
+    if (player.username.startsWith(args)) {
+        // use quick.db
+        db.set(`banned_${player.userId}`, true)
+
+        // check if they are in socket
+        let user = users.find((u) => u.id === player.userId)
+
+        if (user) {
+          user.socket.emit("error", {
+            content: "You have been banned from the server. Please contact support.",
+          });
+          user.socket.disconnect();
+        }
+
+        caller.message("Successfully banned " + player.username)
+        return player.kick("You were banned by a moderator. If you would like to appeal your ban, please message klondike#6949 on Discord.");
+    }
+  }
+}) 
+
+Game.command("unban", (caller, args) => {
+  if (!serverMods.includes(caller.userId)) return
+
+  if(db.get(`banned_${args[0]}`) == true) db.set(`banned_${args[0]}`, false)
+  caller.message("Successfully modified ban status of " + args[0])
+
+})
+
+Game.command("kick", (caller, args) => {  
+  if (!serverMods.includes(caller.userId)) return
+
+  for (let player of Game.players) {
+    if (player.username.startsWith(args)) {
+        // kick from socket
+        let user = users.find((u) => u.id === player.userId)
+        
+        if (user) {
+          user.socket.emit("error", {
+            content: "You have been kicked from the server.",
+          });
+          user.socket.disconnect();
+        }
+
+        caller.message("Successfully kicked " + player.username)
+        return player.kick("You were kicked by a moderator. If you would like to appeal your kick, please message klondike#6949 on Discord.");
+    }
+  }
+})
+
+Game.command("help", (caller, args) => {
+  caller.message("Commands:")
+  caller.message("/help - Shows this message.")
+  caller.message("/ban {username} - Bans a user.")
+  caller.message("/unban {userid} - Unbans a user.")
+  caller.message("/kick {username} - Kicks a user.")
+  caller.message("/globalmute {username} - Mutes all users.")
+})
+  
+Game.on("playerJoin", (player) => {
+  if(db.get(`banned_${player.userId}`)) {
+    player.kick("You were banned by a moderator. If you would like to appeal your ban, please message klondike#6949 on Discord.");
+  }
+
+  if(serverMods.includes(player.userId)) {
+    player.message("[#ff3d3d]You are server moderator. Do [#ffffff]/help [#ff3d3d]for a list of commands.")
+  }
+})
+
 Game.command("verify", (caller, message) => {
   var args = message.split(" ");
   var code = Math.floor(100000 + Math.random() * 900000);
@@ -253,15 +376,10 @@ Game.command("verify", (caller, message) => {
     if (db.get(`${caller.userId}`)) {
       db.delete(`${caller.userId}`);
       caller.message(
-        "[#34b  1eb][VC] [#ffffff]Your verification code has expired due to inactivity."
+        "[#34b1eb][VC] [#ffffff]Your verification code has expired due to inactivity."
       );
     }
   }, 30 * 1000);
-});
-
-Game.command("users", (caller, message) => {
-  caller.message(`[#34b1eb][VC] [#ffffff]Check the [#34b1eb]console[#ffffff].`);
-  console.log(users);
 });
 
 app.post("/auth", (req, res) => {
