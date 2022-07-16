@@ -2,6 +2,9 @@
 
 A [node-hill](https://www.npmjs.com/package/node-hill) script that integrates PeerJS voice chat (that will have proximity volume).
 
+[![View Demo](https://i.imgur.com/Vp3NUci.png)](https://www.brick-hill.com/play/30492)
+[![View Demo](https://i.imgur.com/Lu3JHrI.png)](https://www.npmjs.com/package/node-hill)
+
 ## Setup
 
 ### Install all necessary packages
