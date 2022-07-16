@@ -317,7 +317,7 @@ Game.command("ban", (caller, args) => {
             content: "You have been banned from the server. Please contact support.",
           });
           user.socket.disconnect();
-          user.peer.disconnect();
+          user.peer.socket.close();
         }
 
         caller.message("Successfully banned " + player.username)
@@ -347,7 +347,7 @@ Game.command("kick", (caller, args) => {
             content: "You have been kicked from the server.",
           });
           user.socket.disconnect();
-          user.peer.disconnect();
+          user.peer.socket.close();
         }
 
         caller.message("Successfully kicked " + player.username)
