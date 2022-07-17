@@ -346,7 +346,7 @@ Game.command("kick", (caller, args) => {
         }
 
         caller.message("Successfully kicked " + player.username)
-        if(player) player.kick("You were kicked by a moderator. If you would like to appeal your kick, please message klondike#6949 on Discord.");
+        if(player) player.kick("You were kicked by a moderator.");
     }
   }
 })
