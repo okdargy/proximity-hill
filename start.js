@@ -2,7 +2,7 @@ const nh = require("node-hill");
 const dotenv = require("dotenv").config();
 
 nh.startServer({
-  hostKey: "NtmifVkBmyv0qexOffBgg8ouap4DkvzmEsKycODTSPoHx81Bm0WTCO4ZFLwuPMak", // Your host key here (can be found under the settings of the set.)
+  hostKey: "", // Your host key here (can be found under the settings of the set.)
 
   gameId: 478, // Your game id here
 
