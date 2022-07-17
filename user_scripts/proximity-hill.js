@@ -231,16 +231,14 @@ io.on("connection", (socket) => {
 Game.command("globalmute", (caller, args) => {
   if (!serverMods.includes(caller.userId)) return
 
-  const username = args[0]
-  for (let player of Game.players) {
-    if (player.username.startsWith(args)) {
-      users.forEach(function(){
-        if(this.id == player.userId) {
-          this.socket.emit("error", "You have been muted by a server moderator.")
-        }
+  for (let user of users) {
+    if (user.username.startsWith(args)) {
+      user.socket.emit("error", "You have been muted by a server moderator.")
 
-        caller.message("Successfully muted " + player.username)
-        socket.emit('mute', player.userId)
+      users.forEach((u) => {
+        if(u.id == user.id) return
+        caller.message("Successfully muted " + user.username)
+        u.socket.emit('mute', user.id)
       })
     }
   }
@@ -304,13 +302,13 @@ app.post("/exist", async function (req, res) {
 Game.command("ban", (caller, args) => {
   if (!serverMods.includes(caller.userId)) return
 
-  for (let player of Game.players) {
-    if (player.username.startsWith(args)) {
+  for (let user of users) {
+    if (user.username.startsWith(args)) {
         // use quick.db
         db.set(`banned_${player.userId}`, true)
 
         // check if they are in socket
-        let user = users.find((u) => u.id === player.userId)
+        let player = Game.players.find((player) => player.userId === parseInt(id));
 
         if (user) {
           user.socket.emit("error", {
@@ -335,11 +333,10 @@ Game.command("unban", (caller, args) => {
 Game.command("kick", (caller, args) => {  
   if (!serverMods.includes(caller.userId)) return
 
-  for (let player of Game.players) {
-    if (player.username.startsWith(args)) {
-        // kick from socket
-        let user = users.find((u) => u.id === player.userId)
-        
+  for (let user of users) {
+    if (user.username.startsWith(args)) {
+        let player = Game.players.find((p) => p.userId === parseInt(user.id))
+
         if (user) {
           user.socket.emit("error", {
             content: "You have been kicked from the server.",
@@ -349,7 +346,7 @@ Game.command("kick", (caller, args) => {
         }
 
         caller.message("Successfully kicked " + player.username)
-        return player.kick("You were kicked by a moderator. If you would like to appeal your kick, please message klondike#6949 on Discord.");
+        if(player) player.kick("You were kicked by a moderator. If you would like to appeal your kick, please message klondike#6949 on Discord.");
     }
   }
 })
