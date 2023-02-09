@@ -47,17 +47,23 @@ Check out Meshiest: https://github.com/Meshiest
 */
 
 function calcVolumes(listenerPos, soundPos) {
-  // calulate angle and distance from listener to sound
   const theta = Math.atan2(
     soundPos.y - listenerPos.y,
     soundPos.x - listenerPos.x
   );
-  const dist = Math.hypot(
-    soundPos.y - listenerPos.y,
+
+  const phi = Math.atan2(
+    soundPos.z - listenerPos.z,
     soundPos.x - listenerPos.x
   );
-  const scale =
-    1 - (dist - SOUND_NEAR_RANGE) / (SOUND_CUTOFF_RANGE - SOUND_NEAR_RANGE);
+
+  const dist = Math.hypot(
+    soundPos.y - listenerPos.y,
+    soundPos.x - listenerPos.x,
+    soundPos.z - listenerPos.z
+  );
+
+  const scale = 1 - (dist - SOUND_NEAR_RANGE) / (SOUND_CUTOFF_RANGE - SOUND_NEAR_RANGE);
 
   // target is too far away, no volume
   if (dist > SOUND_CUTOFF_RANGE) return [0, 0];
@@ -65,12 +71,15 @@ function calcVolumes(listenerPos, soundPos) {
   // target is very close, max volume
   if (dist < SOUND_NEAR_RANGE) return [1, 1];
 
-  const cos = Math.cos(theta);
-  const sin = Math.sin(theta);
+  const cosTheta = Math.cos(theta);
+  const sinTheta = Math.sin(theta);
+
+  const cosPhi = Math.cos(phi);
+  const sinPhi = Math.sin(phi);
 
   return [
-    (Math.pow(cos < 0 ? cos : 0, 2) + Math.pow(sin, 2)) * scale,
-    (Math.pow(cos > 0 ? cos : 0, 2) + Math.pow(sin, 2)) * scale,
+    (Math.pow(cosTheta < 0 ? cosTheta : 0, 2) + Math.pow(sinTheta, 2)) * scale,
+    (Math.pow(cosPhi < 0 ? cosPhi : 0, 2) + Math.pow(sinPhi, 2)) * scale,
   ];
 }
 

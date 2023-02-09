@@ -1,3 +1,5 @@
 node_modules
 .env
 json.sqlite
+package-lock.json
+*-min.zip
