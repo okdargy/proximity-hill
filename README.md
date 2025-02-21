@@ -5,6 +5,11 @@ A [node-hill](https://www.npmjs.com/package/node-hill) script that integrates Pe
 [![View Demo](https://i.imgur.com/Vp3NUci.png)](https://www.brick-hill.com/play/30492)
 [![View Demo](https://i.imgur.com/Lu3JHrI.png)](https://www.npmjs.com/package/node-hill)
 
+> [!NOTE]
+> Since this project is dead, check out the video SirStephen made on it when it first came out!
+> 
+> [![Brick Hill... Voice Chat](https://github.com/user-attachments/assets/ae8788b9-0c20-4cda-8c39-18c2cb468c40)](https://www.youtube.com/watch?v=QsPOLbcz-4c)
+
 ## Setup
 
 ### Install all necessary packages
